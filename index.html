@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cypherpunk Sandbox - Web3 Gaming</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0a0a0f;
+      color: #fff;
+    }
+    
+    /* Navigation */
+    nav {
+      background: rgba(20, 20, 30, 0.95);
+      border-bottom: 2px solid #333;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      color: #0ff;
+    }
+    
+    .nav-links {
+      display: flex;
+      gap: 30px;
+      list-style: none;
+    }
+    
+    .nav-links a {
+      color: #aaa;
+      text-decoration: none;
+      transition: color 0.3s;
+      cursor: pointer;
+    }
+    
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: #0ff;
+    }
+    
+    /* Pages */
+    .page {
+      display: none;
+    }
+    
+    .page.active {
+      display: block;
+    }
+    
+    /* Landing Page */
+    #landing {
+      min-height: calc(100vh - 62px);
+    }
+    
+    .hero {
+      text-align: center;
+      padding: 100px 20px;
+      background: linear-gradient(180deg, rgba(0,255,255,0.1) 0%, rgba(0,0,0,0) 100%);
+    }
+    
+    .hero h1 {
+      font-size: 48px;
+      margin-bottom: 20px;
+      color: #0ff;
+      text-shadow: 0 0 20px rgba(0,255,255,0.5);
+    }
+    
+    .hero p {
+      font-size: 18px;
+      color: #aaa;
+      max-width: 600px;
+      margin: 0 auto 40px;
+    }
+    
+    .cta-button {
+      background: #0ff;
+      color: #000;
+      padding: 15px 40px;
+      border: none;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    
+    .cta-button:hover {
+      background: #0cc;
+      box-shadow: 0 0 20px rgba(0,255,255,0.5);
+    }
+    
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 30px;
+      padding: 60px 30px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .feature-card {
+      background: rgba(20, 20, 30, 0.8);
+      border: 1px solid #333;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .feature-card h3 {
+      color: #0ff;
+      margin-bottom: 15px;
+    }
+    
+    /* Game Page */
+    #game-page {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 62px);
+      overflow: hidden;
+    }
+    
+    #game-page.page:not(.active) {
+      display: none !important;
+    }
+    
+    /* Account Page */
+    #account {
+      padding: 40px 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .profile-section {
+      background: rgba(20, 20, 30, 0.8);
+      border: 1px solid #333;
+      padding: 30px;
+      margin-bottom: 20px;
+    }
+    
+    .profile-section h2 {
+      color: #0ff;
+      margin-bottom: 20px;
+    }
+    
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
+    .stat-item {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 15px;
+      border-left: 3px solid #0ff;
+    }
+    
+    .stat-label {
+      color: #888;
+      font-size: 12px;
+    }
+    
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #0ff;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav>
+    <div class="logo">CYPHERPUNK SANDBOX</div>
+    <ul class="nav-links">
+      <li><a href="#" data-page="landing" class="active">Home</a></li>
+      <li><a href="#" data-page="game-page">Play</a></li>
+      <li><a href="#" data-page="account">Account</a></li>
+      <li><a href="#" data-page="about">About</a></li>
+    </ul>
+  </nav>
+
+  <!-- Landing Page -->
+  <div id="landing" class="page active">
+    <div class="hero">
+      <h1>Welcome to Cypherpunk Sandbox</h1>
+      <p>A decentralized, open-world sandbox game built on Web3 principles. Own your assets, control your destiny, play your way.</p>
+      <a href="#" class="cta-button" data-page="game-page">Start Playing</a>
+    </div>
+    
+    <div class="features">
+      <div class="feature-card">
+        <h3>🌍 Infinite World</h3>
+        <p>Procedurally generated universe with unlimited exploration possibilities.</p>
+      </div>
+      <div class="feature-card">
+        <h3>🔒 True Ownership</h3>
+        <p>Your items, your data. All stored locally with full player control.</p>
+      </div>
+      <div class="feature-card">
+        <h3>⚡ No Engine</h3>
+        <p>Built from scratch with pure TypeScript. No dependencies, no bloat.</p>
+      </div>
+      <div class="feature-card">
+        <h3>🎮 Classic Gameplay</h3>
+        <p>Inspired by Terraria, Runescape, and Diablo. Gather, craft, survive.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Page -->
+  <div id="game-page" class="page">
+    <!-- Game will be injected here -->
+  </div>
+
+  <!-- Account Page -->
+  <div id="account" class="page">
+    <div class="profile-section">
+      <h2>Player Profile</h2>
+      <div class="stat-grid">
+        <div class="stat-item">
+          <div class="stat-label">Username</div>
+          <div class="stat-value" id="username">Player123</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Level</div>
+          <div class="stat-value" id="player-level">1</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Experience</div>
+          <div class="stat-value" id="player-xp">0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Play Time</div>
+          <div class="stat-value" id="play-time">0h 0m</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="profile-section">
+      <h2>Statistics</h2>
+      <div class="stat-grid">
+        <div class="stat-item">
+          <div class="stat-label">Strength</div>
+          <div class="stat-value" id="stat-str">10</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Agility</div>
+          <div class="stat-value" id="stat-agi">10</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Intelligence</div>
+          <div class="stat-value" id="stat-int">10</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- About Page -->
+  <div id="about" class="page">
+    <div style="max-width: 800px; margin: 0 auto; padding: 40px 20px;">
+      <div class="profile-section">
+        <h2>About Cypherpunk Sandbox</h2>
+        <p style="line-height: 1.8; color: #aaa;">
+          Cypherpunk Sandbox is an experimental web-based game that embodies the principles of decentralization,
+          player ownership, and open-source development. Built without any game engines or heavy frameworks,
+          it demonstrates what's possible with pure web technologies.
+        </p>
+        <br>
+        <p style="line-height: 1.8; color: #aaa;">
+          <strong style="color: #0ff;">Core Principles:</strong><br>
+          • No telemetry or tracking<br>
+          • Offline-first architecture<br>
+          • Deterministic simulation<br>
+          • Full source code transparency<br>
+          • Player data sovereignty
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Simple page routing
+    let currentPage = 'landing';
+    
+    function showPage(pageId) {
+      // Hide all pages
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      
+      // Update nav links
+      document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+      
+      // Show selected page
+      document.getElementById(pageId).classList.add('active');
+      document.querySelector(`[data-page="${pageId}"]`).classList.add('active');
+      
+      currentPage = pageId;
+      
+      // Load game if switching to game page
+      if (pageId === 'game-page' && !window.gameLoaded) {
+        loadGame();
+      }
+    }
+    
+    // Navigation event listeners
+    document.querySelectorAll('[data-page]').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        showPage(link.dataset.page);
+      });
+    });
+    
+    // Load game module
+    function loadGame() {
+      window.gameLoaded = true;
+      const script = document.createElement('script');
+      script.type = 'module';
+      script.src = '/src/main.ts';
+      document.body.appendChild(script);
+    }
+    
+    // Expose function to update account page
+    window.updateAccountPage = function(player) {
+      document.getElementById('player-level').textContent = player.level;
+      document.getElementById('player-xp').textContent = player.experience + ' / ' + player.experienceToLevel;
+      document.getElementById('stat-str').textContent = player.strength;
+      document.getElementById('stat-agi').textContent = player.agility;
+      document.getElementById('stat-int').textContent = player.intelligence;
+    };
+  </script>
+</body>
+</html>
