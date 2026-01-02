@@ -9,14 +9,21 @@ export class ChatBox {
   private messagesContainer: HTMLDivElement;
   private messages: ChatMessage[] = [];
   private maxMessages = 100;
+  private resizeHandle: HTMLDivElement;
+  private isResizing = false;
+  private startWidth = 0;
+  private startX = 0;
   
   constructor() {
+    // Load saved width or use default
+    const savedWidth = localStorage.getItem('chatWidth') || '400';
+    
     this.root = document.createElement("div");
     this.root.style.cssText = `
       position: absolute;
       bottom: 130px;
       left: 10px;
-      width: 400px;
+      width: ${savedWidth}px;
       height: 150px;
       background: rgba(0, 0, 0, 0.7);
       border: 2px solid #444;
@@ -26,6 +33,8 @@ export class ChatBox {
       pointer-events: auto;
       font-family: monospace;
       font-size: 13px;
+      min-width: 200px;
+      max-width: 600px;
     `;
     
     this.messagesContainer = document.createElement("div");
@@ -36,7 +45,57 @@ export class ChatBox {
       flex-direction: column;
     `;
     
+    // Resize handle
+    this.resizeHandle = document.createElement("div");
+    this.resizeHandle.style.cssText = `
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 8px;
+      cursor: ew-resize;
+      background: rgba(255, 136, 0, 0.3);
+      transition: background 0.2s;
+    `;
+    this.resizeHandle.onmouseenter = () => {
+      this.resizeHandle.style.background = 'rgba(255, 136, 0, 0.6)';
+    };
+    this.resizeHandle.onmouseleave = () => {
+      if (!this.isResizing) {
+        this.resizeHandle.style.background = 'rgba(255, 136, 0, 0.3)';
+      }
+    };
+    
+    this.resizeHandle.onmousedown = (e) => {
+      e.preventDefault();
+      this.isResizing = true;
+      this.startWidth = this.root.offsetWidth;
+      this.startX = e.clientX;
+      
+      document.body.style.cursor = 'ew-resize';
+    };
+    
+    document.addEventListener('mousemove', (e) => {
+      if (!this.isResizing) return;
+      
+      const deltaX = e.clientX - this.startX;
+      const newWidth = Math.max(200, Math.min(600, this.startWidth + deltaX));
+      this.root.style.width = `${newWidth}px`;
+    });
+    
+    document.addEventListener('mouseup', () => {
+      if (this.isResizing) {
+        this.isResizing = false;
+        document.body.style.cursor = '';
+        this.resizeHandle.style.background = 'rgba(255, 136, 0, 0.3)';
+        
+        // Save width to localStorage
+        localStorage.setItem('chatWidth', this.root.offsetWidth.toString());
+      }
+    });
+    
     this.root.appendChild(this.messagesContainer);
+    this.root.appendChild(this.resizeHandle);
     document.getElementById("ui-root")!.appendChild(this.root);
     
     // Welcome message

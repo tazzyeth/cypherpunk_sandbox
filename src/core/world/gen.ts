@@ -25,11 +25,11 @@ function generateStartingArea(world: World) {
       // Create lake in center-right (x: 12-18, y: 8-15)
       if (x >= 12 && x <= 18 && y >= 8 && y <= 15) {
         tile = TileType.WATER;
-        
-        // Bridge across middle of lake (x: 15, y: 10-13)
-        if (x === 15 && y >= 10 && y <= 13) {
-          tile = TileType.BRIDGE;
-        }
+      }
+      
+      // Bridge across middle of lake (x: 15, y: 7-16) - extends from land to land
+      if (x === 15 && y >= 7 && y <= 16) {
+        tile = TileType.BRIDGE;
       }
       
       // Trees near spawn (scattered)
@@ -44,9 +44,31 @@ function generateStartingArea(world: World) {
         tile = TileType.STONE;
       }
       
-      // Dirt path from spawn to Guide NPC location (10, 10)
+      // Dirt paths connecting key areas (ROUTES AROUND WATER!)
+      // 1. Spawn to Guide NPC (10, 10)
       if ((x >= 0 && x <= 10 && y === 0) || 
           (x === 10 && y >= 0 && y <= 10)) {
+        if (tile === TileType.GRASS) {
+          tile = TileType.DIRT;
+        }
+      }
+      
+      // 2. Guide to Bridge entrance - NORTH route around water
+      // From Guide (10,10) → go right to x=11 → north to y=6 → east to bridge (15,6)
+      if ((x === 10 && y >= 10 && y <= 11) ||  // Down from guide
+          (x >= 10 && x <= 11 && y === 11) ||   // Right to x=11
+          (x === 11 && y >= 6 && y <= 11) ||    // North along x=11
+          (x >= 11 && x <= 15 && y === 6)) {    // East to bridge entrance
+        if (tile === TileType.GRASS) {
+          tile = TileType.DIRT;
+        }
+      }
+      
+      // 3. Bridge exit to Cave - SOUTH route
+      // From bridge exit (15,16) → south to y=17 → east to cave (18,18)
+      if ((x === 15 && y >= 16 && y <= 17) ||   // South from bridge
+          (x >= 15 && x <= 18 && y === 17) ||   // East along y=17
+          (x === 18 && y >= 17 && y <= 18)) {   // To cave entrance
         if (tile === TileType.GRASS) {
           tile = TileType.DIRT;
         }

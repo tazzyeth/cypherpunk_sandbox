@@ -26,8 +26,16 @@ export class Player {
   // Currency
   gold = 0;
   
-  // Equipment
-  equippedWeapon: InventoryItem | null = null;
+  // Equipment slots (Runescape-style)
+  equipment = {
+    helm: null as InventoryItem | null,
+    chest: null as InventoryItem | null,
+    legs: null as InventoryItem | null,
+    gloves: null as InventoryItem | null,
+    boots: null as InventoryItem | null,
+    weapon: null as InventoryItem | null,
+    offhand: null as InventoryItem | null,
+  };
   
   // Inventory
   inventory: (InventoryItem | null)[] = new Array(30).fill(null);
@@ -38,9 +46,11 @@ export class Player {
     this.skills = new PlayerSkills();
     
     // Add some starter items
-    this.addItem({ id: "wood", name: "Wood", quantity: 10, icon: "🪵" });
+    this.addItem({ id: "timber", name: "Timber", quantity: 10, icon: "🪵" });
     this.addItem({ id: "stone", name: "Stone", quantity: 5, icon: "🪨" });
-    this.addItem({ id: "sword", name: "Sword", quantity: 1, icon: "⚔️" });
+    
+    // Auto-equip starter wooden sword
+    this.equipment.weapon = { id: "wooden_sword", name: "Wooden Sword", quantity: 1, icon: "⚔️" };
   }
   
   move(dx: number, dy: number) {
@@ -124,32 +134,27 @@ export class Player {
     return true;
   }
   
-  equipWeapon(slotIndex: number): boolean {
+  equipItem(slotIndex: number, slot: keyof typeof this.equipment): boolean {
     const item = this.inventory[slotIndex];
     if (!item) return false;
     
-    // Only bows and swords can be equipped
-    if (item.id === "bow" || item.id === "wooden_sword") {
-      // Unequip current weapon first
-      if (this.equippedWeapon) {
-        this.addItem({...this.equippedWeapon});
-      }
-      
-      // Equip new weapon (remove from inventory)
-      this.equippedWeapon = {...item};
-      this.removeItem(slotIndex, 1);
-      return true;
+    // Unequip current item in that slot first
+    if (this.equipment[slot]) {
+      this.addItem({...this.equipment[slot]!});
     }
     
-    return false;
+    // Equip new item (remove from inventory)
+    this.equipment[slot] = {...item};
+    this.removeItem(slotIndex, 1);
+    return true;
   }
   
-  unequipWeapon(): boolean {
-    if (!this.equippedWeapon) return false;
+  unequipItem(slot: keyof typeof this.equipment): boolean {
+    if (!this.equipment[slot]) return false;
     
-    // Put weapon back in inventory
-    this.addItem({...this.equippedWeapon});
-    this.equippedWeapon = null;
+    // Put item back in inventory
+    this.addItem({...this.equipment[slot]!});
+    this.equipment[slot] = null;
     return true;
   }
   

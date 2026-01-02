@@ -19,6 +19,7 @@ import { Player } from "./core/player/Player";
 import { PlayerEntity } from "./core/entities/PlayerEntity";
 import { NPCEntity } from "./core/entities/NPCEntity";
 import { MonsterEntity } from "./core/entities/MonsterEntity";
+import { CorpseEntity } from "./core/entities/CorpseEntity";
 import { TimeSystem } from "./core/time/TimeSystem";
 import { LightingRenderer } from "./client/lighting/LightingRenderer";
 import { ResourceManager } from "./core/resources/ResourceManager";
@@ -63,13 +64,14 @@ guideNPC.hasQuest = true;
 
 // Spawn 3 Goblins near cave entrance (18, 18) with cloth drops
 const goblinLoot = [
-  { id: "cloth", name: "Cloth", icon: "🧵", chance: 0.15 } // 15% chance
+  { id: "cloth", name: "Cloth", icon: "🧵", chance: 0.5 } // 50% chance
 ];
-const goblin1 = new MonsterEntity(16, 17, "Goblin", 2, 20, 5, 3, 25, 5, goblinLoot);
-const goblin2 = new MonsterEntity(17, 19, "Goblin", 2, 20, 5, 3, 25, 5, goblinLoot);
-const goblin3 = new MonsterEntity(19, 17, "Goblin", 2, 20, 5, 3, 25, 5, goblinLoot);
+const goblin1 = new MonsterEntity(16, 17, "Goblin", 1, 10, 2, 1, 10, 2, goblinLoot);
+const goblin2 = new MonsterEntity(17, 19, "Goblin", 1, 10, 2, 1, 10, 2, goblinLoot);
+const goblin3 = new MonsterEntity(19, 17, "Goblin", 1, 10, 2, 1, 10, 2, goblinLoot);
 
-const entities: (PlayerEntity | NPCEntity | MonsterEntity)[] = [playerEntity, guideNPC, goblin1, goblin2, goblin3];
+const entities: (PlayerEntity | NPCEntity | MonsterEntity | CorpseEntity)[] = [playerEntity, guideNPC, goblin1, goblin2, goblin3];
+const corpses: CorpseEntity[] = [];
 
 camera.follow(playerEntity.x, playerEntity.y);
 
@@ -94,9 +96,17 @@ const craftingMenu = new CraftingMenu();
 
 // Handle crafting
 craftingMenu.onCraft((recipe) => {
-  // Remove required materials
+  // Remove required materials by finding them in inventory
   for (const req of recipe.requires) {
-    player.removeItem(req.id, req.quantity);
+    let remaining = req.quantity;
+    for (let i = 0; i < player.inventory.length && remaining > 0; i++) {
+      const item = player.inventory[i];
+      if (item && item.id === req.id) {
+        const toRemove = Math.min(remaining, item.quantity);
+        player.removeItem(i, toRemove);
+        remaining -= toRemove;
+      }
+    }
   }
   
   // Add crafted item
@@ -123,6 +133,10 @@ function updateInventoryUI() {
   player.inventory.forEach((item, index) => {
     inventory.setItem(index, item);
   });
+  // Update equipment display
+  Object.keys(player.equipment).forEach(slot => {
+    inventory.updateEquipment(slot, player.equipment[slot as keyof typeof player.equipment]);
+  });
 }
 updateInventoryUI();
 
@@ -141,21 +155,9 @@ input.onWheel((delta) => {
   }
 });
 
-// LEFT-CLICK to talk to NPCs
+// LEFT-CLICK removed - use E key for NPCs now
 input.onClick((worldX, worldY) => {
-  // Check if clicking on an NPC
-  for (const entity of entities) {
-    if (entity instanceof NPCEntity) {
-      const dx = Math.abs(entity.x - worldX);
-      const dy = Math.abs(entity.y - worldY);
-      if (dx < 1 && dy < 1) {
-        dialogBox.show(entity, () => {
-          chatBox.addNPCMessage(entity.name, "Goodbye!");
-        });
-        return;
-      }
-    }
-  }
+  // Click handler reserved for future use
 });
 
 // RIGHT-CLICK for everything (move, attack, harvest)
@@ -286,36 +288,51 @@ function handleKeyPress(key: string) {
   } else if (key === "c") {
     craftingMenu.toggle();
     craftingMenu.update(player);
-  } else if (key === " " || key === "space") {
-    // SPACEBAR to gather nearest resource
-    const nearestResource = findNearestResource(2);
-    if (nearestResource) {
-      const tileType = world.tile(nearestResource.x, nearestResource.y);
-      const gathered = resourceManager.gatherFrom(nearestResource.x, nearestResource.y, player, chatBox);
-      
-      if (gathered) {
-        // Play sound based on tile type
-        if (tileType === 4) playHarvestSound("tree");
-        else if (tileType === 3) playHarvestSound("stone");
-        else if (tileType === 2) playHarvestSound("fish");
-        
-        updateInventoryUI();
-      }
-    } else {
-      chatBox.addSystemMessage("No resources nearby! Move closer to trees, stones, or water.");
-    }
   } else if (key === "escape") {
     mainMenu.toggle();
   } else if (key === "f") {
-    // Toggle flashlight
+    // Toggle torch
     lightingRenderer.toggle();
-    console.log("Flashlight:", lightingRenderer.flashlightOn ? "ON" : "OFF");
+    console.log("Torch:", lightingRenderer.torchOn ? "ON" : "OFF");
   } else if (key === "h") {
     // Heal (test)
     player.heal(20);
   } else if (key === "j") {
     // Take damage (test)
     player.takeDamage(10);
+  } else if (key === "e") {
+    // Check for nearby corpses first
+    for (const corpse of corpses) {
+      const dx = Math.abs(corpse.x - playerEntity.x);
+      const dy = Math.abs(corpse.y - playerEntity.y);
+      if (dx < 2 && dy < 2 && !corpse.isEmpty()) {
+        // Loot corpse
+        const loot = corpse.loot();
+        let itemCount = 0;
+        for (const item of loot) {
+          player.addItem(item);
+          itemCount += item.quantity;
+        }
+        updateInventoryUI();
+        chatBox.addSystemMessage(`Looted ${itemCount} items from corpse!`);
+        return;
+      }
+    }
+    
+    // Talk to nearby NPC
+    for (const entity of entities) {
+      if (entity instanceof NPCEntity) {
+        const dx = Math.abs(entity.x - playerEntity.x);
+        const dy = Math.abs(entity.y - playerEntity.y);
+        if (dx < 2 && dy < 2) {
+          dialogBox.show(entity, () => {
+            chatBox.addNPCMessage(entity.name, "Goodbye!");
+          });
+          return;
+        }
+      }
+    }
+    chatBox.addSystemMessage("No NPCs nearby!");
   }
 }
 
@@ -329,11 +346,11 @@ const originalUpdate = input.update.bind(input);
   if (input.isKeyDown("p")) handleKeyPress("p");
   if (input.isKeyDown("k")) handleKeyPress("k");
   if (input.isKeyDown("c")) handleKeyPress("c");
-  if (input.isKeyDown(" ")) handleKeyPress(" ");
   if (input.isKeyDown("escape")) handleKeyPress("escape");
   if (input.isKeyDown("f")) handleKeyPress("f");
   if (input.isKeyDown("h")) handleKeyPress("h");
   if (input.isKeyDown("j")) handleKeyPress("j");
+  if (input.isKeyDown("e")) handleKeyPress("e");
 };
 
 // Player movement with WASD or auto-move to target
@@ -376,12 +393,45 @@ function updatePlayer(dt: number) {
     } else {
       // Reached target!
       if (moveTarget.type === 'monster' && moveTarget.entity) {
-        // Start combat
+        // Manual attack - ONE attack per right-click
         const monster = moveTarget.entity as MonsterEntity;
-        if (!monster.isDead && !playerEntity.inCombat) {
+        if (!monster.isDead) {
           playerEntity.startCombat(monster);
           monster.startCombat(playerEntity);
-          chatBox.addSystemMessage(`Attacking ${monster.name}!`);
+          
+          // Perform single attack
+          const result = playerEntity.performAttack();
+          playAttackSound(result.hit);
+          
+          if (result.hit) {
+            chatBox.addSystemMessage(`You hit for ${result.damage} damage!`);
+            
+            // Check if monster died
+            if (monster.isDead) {
+              chatBox.addSystemMessage(`You defeated the ${monster.name}! +${monster.xpReward} XP, +${monster.goldReward} gold`);
+              player.skills.getSkill("Combat")?.addXP(monster.xpReward);
+              player.addGold(monster.goldReward);
+              
+              // Roll for loot drops
+              const loot = monster.getLoot();
+              console.log(`Monster ${monster.name} dropped:`, loot);
+              if (loot.length === 0) {
+                console.log("No loot this time!");
+              }
+              for (const item of loot) {
+                console.log(`Adding ${item.name} to inventory`);
+                player.addItem(item);
+                chatBox.addSystemMessage(`You received ${item.quantity}x ${item.name}!`);
+              }
+              
+              updateInventoryUI();
+              playerEntity.stopCombat();
+            }
+          } else {
+            chatBox.addSystemMessage("You missed!");
+          }
+          
+          playerEntity.lastAttackTime = Date.now();
         }
       } else if (moveTarget.type === 'resource') {
         // Harvest resource
@@ -399,10 +449,24 @@ function updatePlayer(dt: number) {
   }
   
   if (dx !== 0 || dy !== 0) {
-    playerEntity.move(dx, dy);
-    player.move(dx, dy);
-    camera.follow(playerEntity.x, playerEntity.y);
+    // Check collision BEFORE moving (check the destination tile)
+    const newX = playerEntity.x + dx;
+    const newY = playerEntity.y + dy;
+    const destTileType = world.tile(Math.floor(newX), Math.floor(newY));
+    
+    // Can walk on bridge (5) but not water (2)
+    const canWalk = destTileType !== 2; // Block water only
+    
+    if (canWalk) {
+      // Actually move
+      playerEntity.move(dx, dy);
+      player.move(dx, dy);
+      // Only update camera if player moved
+      camera.follow(playerEntity.x, playerEntity.y);
+    }
+    // If blocked, don't move camera
   }
+
 }
 
 // Game loop
@@ -427,7 +491,7 @@ function loop() {
   // Update monsters
   for (const entity of entities) {
     if (entity instanceof MonsterEntity) {
-      entity.update(dt);
+      entity.update(dt, playerEntity);
     }
   }
   
@@ -439,6 +503,23 @@ function loop() {
   if (playerEntity.health <= 0 && !isDead) {
     isDead = true;
     deathTimer = RESPAWN_TIME;
+    
+    // Spawn corpse with player's items
+    const deathX = playerEntity.x;
+    const deathY = playerEntity.y;
+    const playerItems = player.inventory.filter(item => item !== null);
+    
+    if (playerItems.length > 0) {
+      const corpse = new CorpseEntity(deathX, deathY, playerItems);
+      corpses.push(corpse);
+      entities.push(corpse);
+      chatBox.addSystemMessage("Your items remain on your corpse!");
+    }
+    
+    // Clear player inventory
+    player.inventory = new Array(30).fill(null);
+    updateInventoryUI();
+    
     playerEntity.stopCombat();
     // Stop all monsters from attacking
     for (const entity of entities) {
@@ -455,44 +536,47 @@ function loop() {
     deathTimer -= dt;
     if (deathTimer <= 0) {
       isDead = false;
+      
+      // Respawn at spawn point
+      playerEntity.x = 5;
+      playerEntity.y = 5;
+      player.x = 5;
+      player.y = 5;
+      camera.follow(5, 5);
+      
       playerEntity.health = playerEntity.maxHealth;
       player.health = player.maxHealth;
-      chatBox.addSystemMessage("You have respawned!");
+      
+      // Reset ALL monsters to their spawn points and stop combat
+      for (const entity of entities) {
+        if (entity instanceof MonsterEntity) {
+          entity.x = entity.spawnX;
+          entity.y = entity.spawnY;
+          entity.inCombat = false;
+          entity.target = null;
+        }
+      }
+      
+      chatBox.addSystemMessage("You have respawned at spawn!");
     }
   }
   
-  // Auto-attack if in combat (and not dead)
-  if (playerEntity.inCombat && playerEntity.target && playerEntity.health > 0) {
-    const now = Date.now();
-    if (now - playerEntity.lastAttackTime >= playerEntity.attackSpeed) {
-      const result = playerEntity.performAttack();
-      playAttackSound(result.hit);
-      
-      if (result.hit) {
-        chatBox.addSystemMessage(`You hit for ${result.damage} damage!`);
-        
-        // Check if monster died (with null check to prevent crash)
-        if (playerEntity.target && (playerEntity.target as any).isDead) {
-          const monster = playerEntity.target as MonsterEntity;
-          chatBox.addSystemMessage(`You defeated the ${monster.name}! +${monster.xpReward} XP, +${monster.goldReward} gold`);
-          player.skills.getSkill("Combat")?.addXP(monster.xpReward);
-          player.addGold(monster.goldReward);
-          
-          // Roll for loot drops
-          const loot = monster.getLoot();
-          for (const item of loot) {
-            player.addItem(item);
-            chatBox.addSystemMessage(`You received ${item.quantity}x ${item.name}!`);
-          }
-          
-          updateInventoryUI();
-          playerEntity.stopCombat();
-        }
-      } else {
-        chatBox.addSystemMessage("You missed!");
+  // Manual combat only - player must right-click to attack each time
+  // No auto-attack for player
+  
+  // Clean up expired corpses (5 minutes)
+  for (let i = corpses.length - 1; i >= 0; i--) {
+    const corpse = corpses[i];
+    if (corpse && (corpse.isExpired() || corpse.isEmpty())) {
+      // Remove from both arrays
+      corpses.splice(i, 1);
+      const entityIndex = entities.indexOf(corpse);
+      if (entityIndex !== -1) {
+        entities.splice(entityIndex, 1);
       }
-      
-      playerEntity.lastAttackTime = now;
+      if (corpse.isExpired()) {
+        console.log("Corpse expired and removed");
+      }
     }
   }
   
@@ -542,6 +626,60 @@ window.addEventListener("beforeunload", () => {
 console.log("Starting at spawn point (5, 5) in the starting area");
 chatBox.addSystemMessage("Welcome! You're in the starting area. Follow the path to find the Guide!");
 
+// Handle inventory right-click actions
+window.addEventListener('inventoryAction', (e: any) => {
+  const { action, slotIndex } = e.detail;
+  const item = player.inventory[slotIndex];
+  
+  if (!item) return;
+  
+  if (action === 'equip') {
+    // Determine equipment slot based on item type
+    let slot: keyof typeof player.equipment | null = null;
+    
+    if (item.id === 'bow' || item.id === 'wooden_sword') {
+      slot = 'weapon';
+    } else if (item.id === 'helm') {
+      slot = 'helm';
+    } else if (item.id === 'chest') {
+      slot = 'chest';
+    } else if (item.id === 'legs') {
+      slot = 'legs';
+    } else if (item.id === 'gloves') {
+      slot = 'gloves';
+    } else if (item.id === 'boots') {
+      slot = 'boots';
+    } else if (item.id === 'shield') {
+      slot = 'offhand';
+    }
+    
+    if (slot) {
+      player.equipItem(slotIndex, slot);
+      inventory.updateEquipment(slot, player.equipment[slot]);
+      chatBox.addSystemMessage(`Equipped ${item.name}!`);
+      updateInventoryUI();
+    } else {
+      chatBox.addSystemMessage(`Cannot equip ${item.name}!`);
+    }
+  } else if (action === 'use') {
+    // Use consumables
+    if (item.id === 'cooked_fish') {
+      player.removeItem(slotIndex, 1);
+      player.heal(30);
+      chatBox.addSystemMessage(`Ate ${item.name}! Restored 30 HP`);
+      updateInventoryUI();
+    } else {
+      chatBox.addSystemMessage(`${item.name} is not usable!`);
+    }
+  } else if (action === 'delete') {
+    if (confirm(`Delete ${item.quantity}x ${item.name}?`)) {
+      player.removeItem(slotIndex, item.quantity);
+      chatBox.addSystemMessage(`Deleted ${item.name}`);
+      updateInventoryUI();
+    }
+  }
+});
+
 // Expose player to window for account page
 (window as any).player = player;
 (window as any).updateAccountPage?.(player);
@@ -552,13 +690,11 @@ loop();
 console.log("Controls:");
 console.log("WASD/Arrows - Move");
 console.log("Mouse Wheel - Zoom");
-console.log("SPACEBAR - Gather nearest resource");
+console.log("Right-click - Move/Attack/Harvest");
+console.log("E - Talk to NPCs");
 console.log("I - Toggle Inventory");
 console.log("P - Player Stats & Skills");
 console.log("K - Knowledge & Skill Guide");
 console.log("C - Crafting Menu");
 console.log("ESC - Toggle Menu");
-console.log("F - Toggle Flashlight");
-console.log("Click NPCs - Talk");
-console.log("H - Heal (test)");
-console.log("J - Take damage (test)");
+console.log("F - Toggle Torch");

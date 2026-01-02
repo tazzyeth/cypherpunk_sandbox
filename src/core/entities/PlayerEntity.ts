@@ -46,8 +46,8 @@ export class PlayerEntity extends Entity {
   performAttack(): { hit: boolean; damage: number } {
     if (!this.target) return { hit: false, damage: 0 };
     
-    // Calculate damage (simplified)
-    const damage = Math.max(1, this.attack - ((this.target as any).defense || 0));
+    // Random damage between 1-3
+    const damage = Math.floor(Math.random() * 3) + 1;
     
     // Apply damage to target
     if ((this.target as any).takeDamage) {

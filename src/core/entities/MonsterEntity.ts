@@ -78,18 +78,47 @@ export class MonsterEntity extends Entity {
     return false;
   }
   
-  update(dt: number) {
+  update(dt: number, playerEntity?: any) {
     // Check for respawn
     if (this.isDead && Date.now() - this.diedAt >= this.respawnTime) {
       this.respawn();
     }
     
-    // Auto-attack if in combat
+    // Check for aggro (detect player within 3 tiles)
+    if (!this.isDead && !this.inCombat && playerEntity) {
+      const dx = playerEntity.x - this.x;
+      const dy = playerEntity.y - this.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance <= 3) {
+        // Aggro! Start combat
+        this.startCombat(playerEntity);
+        if (!playerEntity.inCombat) {
+          playerEntity.startCombat(this);
+        }
+      }
+    }
+    
+    // Move towards player if in combat and not in range
     if (this.inCombat && this.target && !this.isDead) {
-      const now = Date.now();
-      if (now - this.lastAttackTime >= this.attackSpeed) {
-        this.performAttack();
-        this.lastAttackTime = now;
+      const dx = this.target.x - this.x;
+      const dy = this.target.y - this.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // Move towards if distance > 1.2 (closer attack range)
+      if (distance > 1.2) {
+        const speed = 2 * dt; // Monster movement speed
+        this.x += (dx / distance) * speed;
+        this.y += (dy / distance) * speed;
+      }
+      
+      // Auto-attack if in range - tighter range for actual attacks
+      if (distance <= 1.5) {
+        const now = Date.now();
+        if (now - this.lastAttackTime >= this.attackSpeed) {
+          this.performAttack();
+          this.lastAttackTime = now;
+        }
       }
     }
   }
@@ -112,13 +141,19 @@ export class MonsterEntity extends Entity {
   performAttack() {
     if (!this.target || this.isDead) return;
     
-    // Calculate damage (simplified)
-    const damage = Math.max(1, this.attack - (this.target as any).defense || 0);
+    // Random damage between 1-2 for monsters
+    const damage = Math.floor(Math.random() * 2) + 1;
     
     // Apply damage to target
     if ((this.target as any).takeDamage) {
       (this.target as any).takeDamage(damage);
+      console.log(`${this.name} hit for ${damage} damage!`);
     }
+  }
+  
+  stopCombat() {
+    this.inCombat = false;
+    this.target = null;
   }
   
   render(ctx: CanvasRenderingContext2D, size: number, x: number, y: number) {
